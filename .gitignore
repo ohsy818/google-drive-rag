@@ -26,7 +26,7 @@ env/
 ENV/
 .env
 .venv
-.env.*
+
 
 # IDE
 .idea/
