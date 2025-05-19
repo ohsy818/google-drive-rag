@@ -1,0 +1,17 @@
+Project A Budget Report
+
+The total budget allocated for Project A is $500,000 for the fiscal year 2024. This budget is divided into the following categories:
+
+1. Development: $250,000
+   - Software development: $150,000
+   - Quality assurance: $100,000
+
+2. Infrastructure: $150,000
+   - Cloud services: $100,000
+   - Hardware: $50,000
+
+3. Marketing: $100,000
+   - Digital marketing: $60,000
+   - Events and conferences: $40,000
+
+The project timeline spans from January 2024 to December 2024, with quarterly reviews scheduled for budget adjustments if needed. 
