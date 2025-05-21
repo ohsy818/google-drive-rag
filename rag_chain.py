@@ -2,7 +2,7 @@ import os
 from typing import List, Dict, Any, Optional
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
-from langchain.chains import RetrievalQA
+from langchain.chains.retrieval_qa.base import RetrievalQA
 from langchain.prompts import PromptTemplate
 from langchain.schema import Document
 from vector_store import VectorStoreManager
@@ -10,11 +10,12 @@ from vector_store import VectorStoreManager
 class RAGChain:
     def __init__(self):
         print("Initializing RAG Chain...")
-        load_dotenv()
+        # Load environment variables from .env file only
+        load_dotenv(override=True)
         
         openai_api_key = os.getenv("OPENAI_API_KEY")
         if not openai_api_key:
-            raise ValueError("OPENAI_API_KEY not found in environment variables")
+            raise ValueError("OPENAI_API_KEY not found in .env file")
         
         # Initialize ChatOpenAI with debugging
         print("Initializing ChatOpenAI...")
@@ -75,7 +76,7 @@ class RAGChain:
 
             # Run the chain
             print("Running RetrievalQA chain...")
-            result = self.chain({"query": question})
+            result = self.chain.invoke({"query": question})
             
             # Extract answer and sources
             answer = result.get("result", "I don't have enough information to answer that question.")

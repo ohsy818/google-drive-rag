@@ -78,3 +78,9 @@ credentials.json
 *.key
 secrets.yaml
 config.local.yaml 
+token.json
+
+# Project files
+pyproject.toml
+*.lock
+.python-version

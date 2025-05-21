@@ -60,6 +60,7 @@ class DocumentProcessor:
     def process_documents(self, documents: List[Document], metadata: dict = None) -> List[Document]:
         """Process documents by splitting them into chunks and adding metadata."""
         try:
+            print(f"Processing {len(documents)} documents...")
             # Add additional metadata if provided
             if metadata:
                 for doc in documents:

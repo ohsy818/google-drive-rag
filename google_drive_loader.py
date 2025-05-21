@@ -9,11 +9,14 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
-from googleapiclient.http import MediaIoBaseDownload
+from googleapiclient.http import MediaIoBaseDownload, MediaFileUpload
 
-from document_loader import DocumentLoader
+from document_loader import DocumentProcessor
 
-SCOPES = ['https://www.googleapis.com/auth/drive.readonly']
+SCOPES = [
+    'https://www.googleapis.com/auth/drive.readonly',
+    'https://www.googleapis.com/auth/drive.file'  # For file upload
+]
 
 class GoogleDriveLoader:
     """Handles loading and processing of documents from Google Drive"""
@@ -30,7 +33,7 @@ class GoogleDriveLoader:
         self.token_path = token_path
         self.credentials = None
         self.service = None
-        self.document_loader = DocumentLoader()
+        self.document_loader = DocumentProcessor()
         
     def authenticate(self) -> None:
         """Authenticate with Google Drive API"""
@@ -128,7 +131,7 @@ class GoogleDriveLoader:
                 temp_file.write(fh.read())
                 temp_file_path = temp_file.name
                 
-            chunks = self.document_loader.process_document(temp_file_path)
+            chunks = self.document_loader.load_document(temp_file_path)
             
             os.unlink(temp_file_path)
             return chunks
@@ -155,4 +158,46 @@ class GoogleDriveLoader:
             chunks = self.download_and_process_file(file['id'], file['name'])
             all_chunks.extend(chunks)
             
-        return all_chunks 
+        return all_chunks
+    
+    def save_to_google_drive(self, file_path: str, folder_id: str) -> dict:
+        """
+        Save a file to Google Drive folder
+        
+        Args:
+            file_path: Path to the file to save
+            folder_id: Google Drive folder ID
+        
+        Returns:
+            dict: File metadata
+        """
+        try:
+            if not self.service:
+                self.authenticate()
+            
+            file_metadata = {
+                'name': os.path.basename(file_path),
+                'parents': [folder_id]
+            }
+            
+            media = MediaFileUpload(
+                file_path,
+                mimetype='application/octet-stream',
+                resumable=True
+            )
+            
+            file = self.service.files().create(
+                body=file_metadata,
+                media_body=media,
+                fields='id, name, webViewLink'
+            ).execute()
+                        
+            return {
+                'file_id': file['id'],
+                'file_name': file['name'],
+                'web_view_link': file['webViewLink']
+            }
+            
+        except Exception as e:
+            print(f"Error in save_to_google_drive: {e}")
+            raise

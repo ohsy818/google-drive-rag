@@ -9,14 +9,14 @@ from langchain.schema import Document
 
 class VectorStoreManager:
     def __init__(self):
-        # Load environment variables
-        load_dotenv()
+        # Load environment variables from .env file only
+        load_dotenv(override=True)
         
         # Check for required environment variables
         required_vars = ['SUPABASE_URL', 'SUPABASE_KEY', 'OPENAI_API_KEY']
         missing_vars = [var for var in required_vars if not os.getenv(var)]
         if missing_vars:
-            raise ValueError(f"Missing required environment variables: {', '.join(missing_vars)}")
+            raise ValueError(f"Missing required environment variables in .env file: {', '.join(missing_vars)}")
 
         # Initialize Supabase client
         supabase_url = os.getenv('SUPABASE_URL')
@@ -32,7 +32,7 @@ class VectorStoreManager:
 
         # Initialize OpenAI embeddings
         print("Initializing OpenAI embeddings...")
-        self.embeddings = OpenAIEmbeddings()
+        self.embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
         print("OpenAI embeddings initialized successfully")
 
         # Initialize Supabase vector store
@@ -51,22 +51,36 @@ class VectorStoreManager:
         try:
             print(f"Adding {len(documents)} documents to vector store...")
             # Add UUID to each document's metadata
+            new_docs = []
             for doc in documents:
-                if 'id' not in doc.metadata:
-                    doc.metadata['id'] = str(uuid.uuid4())
-                print(f"Document content: {doc.page_content[:100]}...")
-                print(f"Document metadata: {doc.metadata}")
+                # print(f"Document: {doc}")
+                if doc.get('page_content'):
+                    new_doc = doc.get('page_content')
+                else:
+                    new_doc = Document(
+                        page_content="",
+                        metadata=doc.get('metadata')
+                    )
+                if new_doc.metadata is None:
+                    new_doc.metadata = {}
+                if 'type' not in new_doc.metadata:
+                    new_doc.metadata['type'] = "upload_file"
+                if 'tenant_id' not in new_doc.metadata:
+                    new_doc.metadata['tenant_id'] = "localhost"
+                new_docs.append(new_doc)
+                # print(f"Document content: {new_doc.page_content[:100]}...")
+                # print(f"Document metadata: {new_doc.metadata}")
 
             # Get embeddings for documents
-            texts = [doc.page_content for doc in documents]
-            metadatas = [doc.metadata for doc in documents]
+            texts = [doc.page_content for doc in new_docs]
+            metadatas = [doc.metadata for doc in new_docs]
             embeddings = self.embeddings.embed_documents(texts)
 
             # Insert documents into Supabase
             for i, (text, metadata, embedding) in enumerate(zip(texts, metadatas, embeddings)):
                 try:
                     self.supabase.table("documents").insert({
-                        "id": metadata['id'],
+                        "id": str(uuid.uuid4()),
                         "content": text,
                         "metadata": metadata,
                         "embedding": embedding
@@ -88,6 +102,10 @@ class VectorStoreManager:
             print(f"Searching for documents similar to query: {query}")
             if filter:
                 print(f"Using filter: {filter}")
+                if 'type' not in filter:
+                    filter['type'] = "upload_file"
+            else:
+                filter = {"type": "upload_file"}
 
             # Get query embedding
             query_embedding = self.embeddings.embed_query(query)
@@ -97,6 +115,7 @@ class VectorStoreManager:
                 'match_documents',
                 {
                     'query_embedding': query_embedding,
+                    'filter': filter,
                     'match_count': 5
                 }
             ).execute()
@@ -120,7 +139,7 @@ class VectorStoreManager:
     def get_retriever(self, **kwargs):
         """Get a retriever for the vector store."""
         print("Creating retriever with kwargs:", kwargs)
-        return self.vector_store.as_retriever(**kwargs)
+        return self.vector_store.as_retriever(search_kwargs={"k": 5})
 
 # Example usage
 if __name__ == "__main__":

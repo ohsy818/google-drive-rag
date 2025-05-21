@@ -39,24 +39,28 @@ CREATE TABLE documents (
 );
 
 -- 벡터 검색 함수 생성
-CREATE OR REPLACE FUNCTION match_documents(
-    query_embedding VECTOR(1536),
-    filter JSONB DEFAULT '{}'::jsonb
+create or replace function match_documents(
+  query_embedding vector(1536),
+  filter jsonb default '{}'::jsonb,
+  match_count int default 5
 )
-RETURNS TABLE(
-    id UUID,
-    content TEXT,
-    metadata JSONB,
-    similarity FLOAT
+returns table (
+  id uuid,
+  content text,
+  metadata jsonb,
+  similarity float
 )
-LANGUAGE SQL
-AS $$
-    SELECT id, content, metadata,
-           1 - (embedding <=> query_embedding) AS similarity
-    FROM documents
-    WHERE metadata @> filter
-    ORDER BY embedding <-> query_embedding
-    LIMIT 5;
+language sql
+as $$
+  select
+    documents.id,
+    documents.content,
+    documents.metadata,
+    1 - (documents.embedding <=> query_embedding) as similarity
+  from documents
+  where documents.metadata @> filter
+  order by documents.embedding <=> query_embedding
+  limit match_count;
 $$;
 ```
 
@@ -65,11 +69,13 @@ $$;
 1. 로컬 문서 처리:
 ```bash
 python main.py process --input_dir /path/to/documents
+uv run main.py process --input_dir /path/to/documents
 ```
 
 2. Google Drive 문서 처리:
 ```bash
 python main.py process-drive --folder_id <folder_id> --credentials /path/to/credentials.json
+uv run main.py process-drive --folder_id 1q_3S1J2cDl9Ztc7QGL7TAoK5nP2nJBuF --credentials ./credentials.json
 ```
 - `folder_id`는 Google Drive 폴더의 ID입니다 (URL에서 찾을 수 있음)
 - 첫 실행 시 브라우저에서 Google 계정 인증이 필요합니다
@@ -78,6 +84,7 @@ python main.py process-drive --folder_id <folder_id> --credentials /path/to/cred
 ```bash
 # 모든 문서 검색
 python main.py query --question "your question here"
+uv run main.py query --question "your question here"
 
 # 특정 저장소의 문서만 검색
 python main.py query --question "your question here" --storage_type GoogleDrive
@@ -90,6 +97,7 @@ python main.py query --question "your question here" --storage_type GoogleDrive
 - Microsoft PowerPoint (.ppt, .pptx)
 - Microsoft Excel (.xls, .xlsx)
 - PDF (.pdf)
+- Text (.txt)
 
 ### Google Drive 문서:
 - Google Docs
@@ -97,6 +105,7 @@ python main.py query --question "your question here" --storage_type GoogleDrive
 - Google Slides
 - Microsoft Office 문서
 - PDF 파일
+- Text 파일
 
 ## 주의사항
 

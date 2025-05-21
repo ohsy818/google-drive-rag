@@ -17,3 +17,6 @@ pandas==2.2.1
 google-api-python-client==2.118.0
 google-auth-httplib2==0.2.0
 google-auth-oauthlib==1.2.0 
+fastapi==0.115.4
+uvicorn==0.31.0
+pydantic==2.11.4
